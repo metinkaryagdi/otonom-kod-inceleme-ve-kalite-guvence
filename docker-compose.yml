@@ -29,6 +29,7 @@ services:
       retries: 5
 
   ollama-engine:
+    profiles: ["local-ollama"]
     image: ollama/ollama:latest
     container_name: smart-review-ollama
     ports:
@@ -39,6 +40,7 @@ services:
     restart: unless-stopped
 
   ollama-init:
+    profiles: ["local-ollama"]
     image: ollama/ollama:latest
     container_name: smart-review-ollama-init
     depends_on:
