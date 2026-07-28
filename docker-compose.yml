@@ -28,37 +28,6 @@ services:
       timeout: 5s
       retries: 5
 
-  ollama-engine:
-    profiles: ["local-ollama"]
-    image: ollama/ollama:latest
-    container_name: smart-review-ollama
-    ports:
-      - "11435:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-      - ./models:/models
-    restart: unless-stopped
-
-  ollama-init:
-    profiles: ["local-ollama"]
-    image: ollama/ollama:latest
-    container_name: smart-review-ollama-init
-    depends_on:
-      - ollama-engine
-    volumes:
-      - ./models:/models
-    environment:
-      - OLLAMA_HOST=http://ollama-engine:11434
-    entrypoint: >
-      /bin/sh -c "
-      echo 'Waiting for Ollama engine to start...';
-      sleep 5;
-      ollama create security-reviewer -f /models/Modelfile.security;
-      ollama create clean-code-reviewer -f /models/Modelfile.cleancode;
-      ollama create unittest-generator -f /models/Modelfile.unittest;
-      echo 'Ollama models successfully registered!';
-      "
-
   smart-review-api:
     build:
       context: .
@@ -69,10 +38,11 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=smart_review_db;Username=review_user;Password=review_secret_password
       - RabbitMQ__Host=rabbitmq
-      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://ollama-engine:11434}
+      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - Ollama__UseOfflineMockFallback=false
       - DATA_DIR=/data
     volumes:
-      - ./data:/data
+      - shared_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,10 +57,11 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=smart_review_db;Username=review_user;Password=review_secret_password
       - RabbitMQ__Host=rabbitmq
-      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://ollama-engine:11434}
+      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - Ollama__UseOfflineMockFallback=false
       - DATA_DIR=/data
     volumes:
-      - ./data:/data
+      - shared_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,4 +83,4 @@ services:
 
 volumes:
   postgres_data:
-  ollama_data:
+  shared_data:
