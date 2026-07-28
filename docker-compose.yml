@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smart-review-postgres
+    environment:
+      POSTGRES_DB: smart_review_db
+      POSTGRES_USER: review_user
+      POSTGRES_PASSWORD: review_secret_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U review_user -d smart_review_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: smart-review-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-engine:
+    image: ollama/ollama:latest
+    container_name: smart-review-ollama
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./models:/models
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: smart-review-ollama-init
+    depends_on:
+      - ollama-engine
+    volumes:
+      - ./models:/models
+    environment:
+      - OLLAMA_HOST=http://ollama-engine:11434
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for Ollama engine to start...';
+      sleep 5;
+      ollama create security-reviewer -f /models/Modelfile.security;
+      ollama create clean-code-reviewer -f /models/Modelfile.cleancode;
+      ollama create unittest-generator -f /models/Modelfile.unittest;
+      echo 'Ollama models successfully registered!';
+      "
+
+  smart-review-api:
+    build:
+      context: .
+      dockerfile: src/backend/SmartReview.Api/Dockerfile
+    container_name: smart-review-api
+    ports:
+      - "${HOST_PORT:-5000}:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=smart_review_db;Username=review_user;Password=review_secret_password
+      - RabbitMQ__Host=rabbitmq
+      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://ollama-engine:11434}
+      - DATA_DIR=/data
+    volumes:
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  smart-review-worker:
+    build:
+      context: .
+      dockerfile: src/backend/SmartReview.Worker/Dockerfile
+    container_name: smart-review-worker
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=smart_review_db;Username=review_user;Password=review_secret_password
+      - RabbitMQ__Host=rabbitmq
+      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://ollama-engine:11434}
+      - DATA_DIR=/data
+    volumes:
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  smart-review-web:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: smart-review-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+      - NEXT_PUBLIC_HUB_URL=${NEXT_PUBLIC_HUB_URL:-http://localhost:5000/hubs/review-progress}
+    depends_on:
+      - smart-review-api
+
+volumes:
+  postgres_data:
+  ollama_data:

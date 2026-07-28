@@ -1,0 +1,30 @@
+# .NET Build Artifacts
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Node & Frontend Build Artifacts
+**/node_modules/
+**/.next/
+**/out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database & Persistent Volumes
+/data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Large Model Binary Weights (Modelfiles remain tracked)
+models/*.gguf
+
+# Environment & OS Secrets
+.env
+.env.local
+.DS_Store
+Thumbs.db
