@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   GitPullRequest,
   ShieldAlert,
@@ -20,6 +21,7 @@ import KpiCard from "@/components/KpiCard";
 import { fetchAllReviews, fetchDashboardStats, triggerSimulatedPR, submitCustomCode, PullRequestReview, DashboardStats } from "@/lib/api";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [reviews, setReviews] = useState<PullRequestReview[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     totalReviews: 0,
@@ -83,9 +85,13 @@ namespace Enterprise.Services
     if (!customCode.trim()) return;
     setSubmittingCustom(true);
     try {
-      await submitCustomCode(customFilePath, customCode, customTitle);
+      const res = await submitCustomCode(customFilePath, customCode, customTitle);
       setIsCustomModalOpen(false);
-      await loadData();
+      if (res?.reviewId) {
+        router.push(`/pr/${res.reviewId}/live`);
+      } else {
+        await loadData();
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -96,8 +102,12 @@ namespace Enterprise.Services
   const handleSimulatePR = async () => {
     setSimulating(true);
     try {
-      await triggerSimulatedPR();
-      await loadData();
+      const res = await triggerSimulatedPR();
+      if (res?.reviewId) {
+        router.push(`/pr/${res.reviewId}/live`);
+      } else {
+        await loadData();
+      }
     } catch (e) {
       console.error(e);
     } finally {
