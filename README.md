@@ -87,6 +87,30 @@ flowchart TD
 
 ---
 
+## 📸 Screenshots
+
+### Autonomous Code Review Dashboard
+Real-time PR review feed powered by SignalR WebSockets, with AST token savings, blocked vulnerabilities, and generated test counts tracked live.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Live Fan-Out / Fan-In Pipeline Visualizer
+Tracks the 5-stage MassTransit pipeline (ACL Ingestion → Roslyn AST Pruning → Fan-Out SLMs → Guardrails → Supervisor Final) in real time.
+
+![Live Visualizer](docs/screenshots/live-visualizer.png)
+
+### PR Code Review View
+Inline diff annotations from the specialized SLM squad — security vulnerabilities (CWE-89 SQL Injection), generated xUnit tests, and Roslyn-verified suggestions.
+
+![PR Review](docs/screenshots/pr-review.png)
+
+### Supervisor Executive Summary
+Conflict-resolved synthesis of all agent findings with summary metrics and per-agent contribution breakdown.
+
+![Supervisor Summary](docs/screenshots/supervisor-summary.png)
+
+---
+
 ## 📂 Repository Structure
 
 ```text
